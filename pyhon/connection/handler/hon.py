@@ -84,7 +84,7 @@ class HonConnectionHandler(ConnectionHandler):
             elif (
                 self.auth.token_is_expired or response.status in [401, 403]
             ) and loop == 1:
-                _LOGGER.warning(
+                _LOGGER.info(
                     "%s - Error %s - %s",
                     response.request_info.url,
                     response.status,
