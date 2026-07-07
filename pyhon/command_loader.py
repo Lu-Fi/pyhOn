@@ -188,6 +188,17 @@ class HonCommandLoader:
             if not base:
                 continue
             base_command: HonCommand = copy(base)
+            # `copy()` only shallow-copies the HonCommand: base_command.parameters
+            # would still be the *same* dict, holding the *same* parameter objects,
+            # as base.parameters. Every subsequent mutation below (favourite-specific
+            # overrides, the "favourite" marker, the program name) would then silently
+            # leak back into `base` and into every other favourite derived from the
+            # same base program - which is exactly why selecting one favourite could
+            # make the program name (or other settings) of an unrelated one change too.
+            # Give this favourite its own independent parameter objects instead.
+            base_command._parameters = {
+                key: copy(parameter) for key, parameter in base.parameters.items()
+            }
             self._update_base_command_with_data(base_command, favourite)
             self._update_base_command_with_favourite(base_command)
             self._update_program_categories(command_name, name, base_command)
@@ -221,7 +232,10 @@ class HonCommandLoader:
     def _update_program_categories(
         self, command_name: str, name: str, base_command: HonCommand
     ) -> None:
-        program = base_command.parameters["program"]
+        program = base_command.parameters.get("program")
         if isinstance(program, HonParameterProgram):
+            # `program` is already an independent copy (see _add_favourites),
+            # so this only affects this favourite's own name, not `base` or
+            # any other favourite derived from it.
             program.set_value(name)
         self.commands[command_name].categories[name] = base_command
