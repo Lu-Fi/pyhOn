@@ -90,6 +90,14 @@ class Hon:
     ) -> None:
         appliance = HonAppliance(api, appliance_data, zone=zone)
         if appliance.mac_address == "":
+            # This appliance gets silently dropped - no entities/devices for it
+            # will ever show up in Home Assistant, and previously nothing was
+            # logged at all when this happened, making it look like the API
+            # simply returned zero appliances. Log it so this is diagnosable.
+            _LOGGER.warning(
+                "Skipping appliance with empty mac_address - raw data: %s",
+                appliance_data,
+            )
             return
         try:
             await appliance.load_commands()
@@ -102,6 +110,11 @@ class Hon:
 
     async def setup(self) -> None:
         appliances = await self.api.load_appliances()
+        _LOGGER.info(
+            "Loaded %s appliance(s) from the hOn API: %s",
+            len(appliances),
+            [a.get("macAddress", "<no macAddress key>") for a in appliances],
+        )
         for appliance in appliances:
             if (zones := int(appliance.get("zone", "0"))) > 1:
                 for zone in range(zones):

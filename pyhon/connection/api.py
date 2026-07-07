@@ -85,12 +85,20 @@ class HonAPI:
     async def load_appliances(self) -> List[Dict[str, Any]]:
         async with self._hon.get(f"{const.API_URL}/commands/v1/appliance") as resp:
             result = await resp.json()
-        if result:
-            appliances: List[Dict[str, Any]] = result.get("payload", {}).get(
-                "appliances", {}
+        if not result:
+            _LOGGER.warning(
+                "GET /commands/v1/appliance returned an empty/falsy body: %r", result
             )
-            return appliances
-        return []
+            return []
+        appliances: List[Dict[str, Any]] = result.get("payload", {}).get(
+            "appliances", {}
+        )
+        if not appliances:
+            _LOGGER.warning(
+                "GET /commands/v1/appliance returned no appliances - full body: %s",
+                result,
+            )
+        return appliances
 
     async def load_commands(self, appliance: HonAppliance) -> Dict[str, Any]:
         params: Dict[str, str | int] = {
