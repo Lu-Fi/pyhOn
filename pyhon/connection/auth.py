@@ -270,10 +270,19 @@ class HonAuth:
                 raise exceptions.HonAuthenticationError("Can't login")
             if not await self._get_token(url):
                 raise exceptions.HonAuthenticationError("Can't get token")
-            if not await self._api_auth():
-                raise exceptions.HonAuthenticationError("Can't get api token")
         except exceptions.HonNoAuthenticationNeeded:
-            return
+            # The "already logged in" shortcut only gives us access_token,
+            # refresh_token and id_token (parsed straight from the callback
+            # URL) - it never ran the normal flow's final step below, which
+            # exchanges the id_token for the actual cognito_token the hOn API
+            # requires. Without it every subsequent API call (e.g. loading
+            # appliances) goes out with an empty cognito-token header and
+            # silently comes back empty, with no error anywhere.
+            pass
+        # Always exchange the id_token for a cognito_token, whether we just
+        # logged in normally or took the "already authenticated" shortcut.
+        if not await self._api_auth():
+            raise exceptions.HonAuthenticationError("Can't get api token")
 
     async def refresh(self, refresh_token: str = "") -> bool:
         if refresh_token:
