@@ -121,7 +121,13 @@ class HonAuth:
             text = await response.text()
             self._expires = datetime.utcnow()
             login_url: List[str] = re.findall("(?:url|href) ?= ?'(.+?)'", text)
-            if not login_url:
+            # Not only "no link found" means we're already logged in: if Haier's
+            # server recognizes an existing session, the page can also hand us
+            # the final mobile-app callback link (a `hon://...` URL) directly as
+            # the only match. That URL isn't http(s), so blindly following it as
+            # a normal redirect target crashes aiohttp with NonHttpUrlClientError.
+            # Detect this case the same way as the "no link at all" case.
+            if not login_url or "oauth/done#access_token=" in login_url[0]:
                 if "oauth/done#access_token=" in text:
                     self._parse_token_data(text)
                     raise exceptions.HonNoAuthenticationNeeded()
