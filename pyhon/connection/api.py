@@ -142,10 +142,6 @@ class HonAPI:
         if not result or not result.get("payload"):
             return []
         favourites: List[Dict[str, Any]] = result["payload"]["favourites"]
-        # Diagnostic: dump the raw favourite payload so it's possible to see
-        # exactly which parameters (e.g. dirtyLevel) Haier's server actually
-        # sends back for each saved favourite, instead of guessing.
-        _LOGGER.info("Raw favourites payload from hOn API: %s", favourites)
         return favourites
 
     async def load_last_activity(self, appliance: HonAppliance) -> Dict[str, Any]:

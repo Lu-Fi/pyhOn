@@ -219,7 +219,24 @@ class HonCommandLoader:
         for data in command.values():
             if isinstance(data, str):
                 continue
+            # Haier nests the actual per-favourite override values (e.g.
+            # dirtyLevel, temp, spinSpeed) one level deeper, inside
+            # data["parameters"], not directly in `data` itself. Without this,
+            # every favourite built from the same base program (e.g. all
+            # "resistant_cotton" favourites) silently kept the base program's
+            # generic default temp/dirtyLevel/etc. instead of its own saved
+            # values - selecting different favourites appeared to have no
+            # effect on these settings at all.
+            for key, value in data.get("parameters", {}).items():
+                if not (parameter := base_command.parameters.get(key)):
+                    continue
+                with suppress(ValueError):
+                    parameter.value = value
+            # Keep the previous (shallow) behaviour too, in case a caller
+            # ever passes an already-flattened dict.
             for key, value in data.items():
+                if isinstance(value, dict):
+                    continue
                 if not (parameter := base_command.parameters.get(key)):
                     continue
                 with suppress(ValueError):
